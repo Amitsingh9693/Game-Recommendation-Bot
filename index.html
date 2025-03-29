@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Recommendation Bot</title>
     <link rel="stylesheet" href="bot.css">
-
 </head>
 <body>
     <!-- Developer Panel Toggle -->
@@ -13,39 +12,24 @@
     
     <!-- Developer Panel -->
     <div class="developers-panel" id="dev-panel">
-        <div class="developers-title">Development Team</div>
+        <h3>Development Team</h3>
         
         <div class="developer">
             <img src="download.png" class="developer-photo" alt="Amit Kumar">
             <div class="developer-name">Amit Kumar</div>
             <div class="developer-role">Lead Developer</div>
-            <div class="developer-social">
-                <a href="#" class="social-icon">💻</a>
-                <a href="#" class="social-icon">🔗</a>
-                <a href="#" class="social-icon">📧</a>
-            </div>
         </div>
         
         <div class="developer">
             <img src="Screenshot 2025-03-29 135037.png" class="developer-photo" alt="Kishan Yadav">
             <div class="developer-name">Kishan Yadav</div>
             <div class="developer-role">UI/UX Designer</div>
-            <div class="developer-social">
-                <a href="#" class="social-icon">💻</a>
-                <a href="#" class="social-icon">🔗</a>
-                <a href="#" class="social-icon">📧</a>
-            </div>
         </div>
         
         <div class="developer">
             <img src="efe65c68-d1ec-492c-a899-928926c25d7d.jpg" class="developer-photo" alt="Priyanshu Kumar">
             <div class="developer-name">Priyanshu Kumar</div>
             <div class="developer-role">Engineer</div>
-            <div class="developer-social">
-                <a href="#" class="social-icon">💻</a>
-                <a href="#" class="social-icon">🔗</a>
-                <a href="#" class="social-icon">📧</a>
-            </div>
         </div>
     </div>
     
@@ -70,9 +54,27 @@
     </div>
 
     <script>
-        // API key for RAWG.io
-        const API_KEY = 'ae1cc50a0ccd4a0da6d2c7da5f14f98f'; // Replace with your actual API key
+        const API_KEY = 'ae1cc50a0ccd4a0da6d2c7da5f14f98f';
+        const BANNED_GAMES = ["Hazumi and the Pregnation"];
+        const recommendedGames = new Set(); // Track recommended games to avoid duplicates
         
+        // Expanded keyword lists
+        const GENRES = [
+            'action', 'adventure', 'rpg', 'strategy', 'shooter', 
+            'puzzle', 'racing', 'sports', 'simulation', 'horror',
+            'indie', 'arcade', 'fighting', 'battle royale', 'mmo',
+            'survival', 'open world', 'story', 'multiplayer', 'singleplayer',
+            'fps', 'tps', 'platformer', 'roguelike', 'sandbox'
+        ];
+        
+        const PLATFORMS = [
+            'pc', 'playstation', 'xbox', 'nintendo', 'mobile',
+            'ps5', 'ps4', 'xbox one', 'xbox series', 'switch',
+            'steam', 'windows', 'mac', 'linux', 'android', 'ios'
+        ];
+        
+        const YEARS = Array.from({length: 25}, (_, i) => 2000 + i); // 2000-2024
+
         document.addEventListener('DOMContentLoaded', function() {
             const chatMessages = document.getElementById('chat-messages');
             const userInput = document.getElementById('user-input');
@@ -91,6 +93,7 @@
             // Initial bot message
             setTimeout(() => {
                 addBotMessage("Looking for your next favorite game? Tell me what you like, and I'll suggest something awesome!");
+                addBotMessage("Try asking about genres (RPG, action), platforms (PC, PlayStation), or release years!");
             }, 500);
             
             // Send message when button is clicked or Enter is pressed
@@ -150,6 +153,12 @@
             }
             
             function addGameCard(game) {
+                // Skip if game was already recommended
+                if (recommendedGames.has(game.id)) {
+                    return;
+                }
+                recommendedGames.add(game.id);
+                
                 const gameCard = document.createElement('div');
                 gameCard.className = 'game-card';
                 
@@ -166,8 +175,8 @@
                         <div class="game-rating">⭐ ${game.rating ? game.rating.toFixed(1) : 'N/A'}</div>
                         <div class="game-released">${releaseDate}</div>
                     </div>
-                    ${game.background_image ? `<img src="${game.background_image}" class="game-image" alt="${game.name}">` : ''}
-                    <a href="${gameLink}" class="game-link" target="_blank">View game details</a>
+                    ${game.background_image ? `<img src="${game.background_image}" class="game-image" alt="${game.name}" style="max-width:100%; border-radius:5px; margin-top:10px;">` : ''}
+                    <a href="${gameLink}" class="game-link" target="_blank" style="color:#4ECDC4; display:block; margin-top:10px;">View game details</a>
                 `;
                 
                 chatMessages.appendChild(gameCard);
@@ -175,32 +184,22 @@
             }
             
             async function processUserInput(input) {
-                // Simple keyword matching
                 const lowerInput = input.toLowerCase();
                 
                 // Default parameters for the API
                 let params = {
-                    page_size: 6,
+                    page_size: 4,
                     ordering: '-rating',
                 };
                 
                 // Detect genre
-                const genres = [
-                    'action', 'adventure', 'rpg', 'strategy', 'shooter', 
-                    'puzzle', 'racing', 'sports', 'simulation', 'horror'
-                ];
-                
-                const detectedGenre = genres.find(genre => lowerInput.includes(genre));
+                const detectedGenre = GENRES.find(genre => lowerInput.includes(genre));
                 if (detectedGenre) {
                     params.genres = detectedGenre;
                 }
                 
                 // Detect platform
-                const platforms = [
-                    'pc', 'playstation', 'xbox', 'nintendo', 'mobile'
-                ];
-                
-                const detectedPlatform = platforms.find(platform => lowerInput.includes(platform));
+                const detectedPlatform = PLATFORMS.find(platform => lowerInput.includes(platform));
                 if (detectedPlatform) {
                     params.platforms = detectedPlatform;
                 }
@@ -217,11 +216,21 @@
                     const data = await response.json();
                     
                     if (data.results && data.results.length > 0) {
-                        data.results.forEach(game => {
-                            addGameCard(game);
-                        });
+                        // Filter out banned games and duplicates
+                        const validGames = data.results.filter(game => 
+                            !BANNED_GAMES.some(banned => game.name.includes(banned)) &&
+                            !recommendedGames.has(game.id)
+                        );
+                        
+                        if (validGames.length > 0) {
+                            validGames.forEach(game => {
+                                addGameCard(game);
+                            });
+                        } else {
+                            addBotMessage("I couldn't find new games matching your request. Try a different search.");
+                        }
                     } else {
-                        addBotMessage("I couldn't find games matching your request. Try being more specific.");
+                        addBotMessage("No games matched your request. Try being more specific.");
                     }
                 } catch (error) {
                     console.error("Error fetching game data:", error);
